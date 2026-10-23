@@ -1,0 +1,71 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
+  <defs>
+    <linearGradient id="kb-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FF5722"/>
+      <stop offset="50%" stop-color="#F97316"/>
+      <stop offset="100%" stop-color="#EA580C"/>
+    </linearGradient>
+    <linearGradient id="kb-glow" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#FEF08A"/>
+      <stop offset="100%" stop-color="#F59E0B"/>
+    </linearGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="16" stdDeviation="20" flood-color="#EA580C" flood-opacity="0.35"/>
+    </filter>
+  </defs>
+
+  <!-- Background App Squircle Badge -->
+  <rect x="32" y="32" width="448" height="448" rx="112" fill="url(#kb-grad)" filter="url(#shadow)"/>
+
+  <!-- Subtle Inner Ring -->
+  <rect x="36" y="36" width="440" height="440" rx="108" stroke="rgba(255,255,255,0.25)" stroke-width="4" fill="none"/>
+
+  <!-- Kirbite Iconic Food & Bite Element -->
+  <g transform="translate(256, 256)">
+    <!-- Steam Swirls (Hot Campus Food) -->
+    <path d="M-50 -130 Q-40 -165 -50 -185" stroke="#FFF" stroke-width="10" stroke-linecap="round" fill="none" opacity="0.8"/>
+    <path d="M0 -140 Q12 -175 0 -200" stroke="#FEF08A" stroke-width="12" stroke-linecap="round" fill="none" opacity="0.95"/>
+    <path d="M50 -130 Q60 -165 50 -185" stroke="#FFF" stroke-width="10" stroke-linecap="round" fill="none" opacity="0.8"/>
+
+    <!-- Burger / Bun / Bowl Upper Bun with Iconic "BITE" Takeout on right -->
+    <path d="M -130,-20 
+             C -130,-90 -60,-120 0,-120 
+             C 45,-120 85,-105 105,-85
+             C 95,-75 95,-60 108,-50
+             C 120,-40 132,-45 138,-35
+             C 142,-25 130,-10 135,0
+             L -130,0 Z" 
+          fill="#FFF"/>
+
+    <!-- Sesame seeds on Bun -->
+    <ellipse cx="-55" cy="-70" rx="9" ry="5" fill="#F59E0B" transform="rotate(-15 -55 -70)"/>
+    <ellipse cx="5" cy="-80" rx="9" ry="5" fill="#F59E0B" transform="rotate(10 5 -80)"/>
+    <ellipse cx="-20" cy="-45" rx="9" ry="5" fill="#F59E0B" transform="rotate(-5 -20 -45)"/>
+    <ellipse cx="60" cy="-55" rx="9" ry="5" fill="#F59E0B" transform="rotate(25 60 -55)"/>
+
+    <!-- Patty / Wavy Cheese Melt Layer -->
+    <path d="M -135,10 
+             C -110,10 -105,30 -80,30 
+             C -55,30 -50,10 -20,10 
+             C 10,10 15,35 45,35 
+             C 75,35 80,15 110,15 
+             C 130,15 135,25 140,25
+             L 135,45
+             L -135,45 Z" 
+          fill="url(#kb-glow)"/>
+
+    <!-- Crispy Filling Patty / Grill Base -->
+    <rect x="-135" y="55" width="270" height="24" rx="12" fill="#7C2D12"/>
+
+    <!-- Bottom Bun / Plate -->
+    <path d="M -130,90 
+             L 130,90 
+             C 130,135 70,150 0,150 
+             C -70,150 -130,135 -130,90 Z" 
+          fill="#FFF"/>
+
+    <!-- Sparkle Bite Stars on the bite mark -->
+    <path d="M 145,-75 L 150,-60 L 165,-55 L 150,-50 L 145,-35 L 140,-50 L 125,-55 L 140,-60 Z" fill="#FEF08A"/>
+    <circle cx="170" cy="-25" r="5" fill="#FFF"/>
+  </g>
+</svg>

@@ -1,0 +1,22 @@
+{
+  "name": "kirbite",
+  "version": "1.0.0",
+  "description": "Kirbite - MERN Stack College Campus Hostel Food Ordering Platform for Kirba Chowk",
+  "scripts": {
+    "server": "npm --prefix server run dev",
+    "client": "npm --prefix client run dev",
+    "build": "npm --prefix client run build",
+    "seed": "npm --prefix server run seed"
+  },
+  "keywords": [
+    "mern",
+    "socket.io",
+    "campus-delivery",
+    "upi",
+    "hostel-food",
+    "react",
+    "tailwind"
+  ],
+  "author": "",
+  "license": "MIT"
+}
