@@ -3,6 +3,7 @@ import { Navbar } from './components/Navbar';
 import { CustomerHome } from './pages/CustomerHome';
 import { StallMenu } from './pages/StallMenu';
 import { VendorDashboard } from './pages/VendorDashboard';
+import { AdminPage } from './pages/AdminPage';
 import { CartDrawer } from './components/CartDrawer';
 import { OrderTrackerModal } from './components/OrderTrackerModal';
 import { LoginModal } from './components/LoginModal';
@@ -13,15 +14,45 @@ import { socket } from './utils/socket';
 import { MapPin, ShieldCheck } from 'lucide-react';
 
 const KirbiteApp = () => {
-  const [currentView, setCurrentView] = useState('customer'); // 'customer' | 'vendor'
+  // Check URL pathname or hash for hidden /admin route
+  const getInitialView = () => {
+    const path = window.location.pathname.toLowerCase();
+    const hash = window.location.hash.toLowerCase();
+    if (path === '/admin' || path.startsWith('/admin') || hash === '#/admin') {
+      return 'admin';
+    }
+    return 'customer';
+  };
+
+  const [currentView, setCurrentView] = useState(getInitialView); // 'customer' | 'vendor' | 'admin'
   const [stalls, setStalls] = useState([]);
   const [loadingStalls, setLoadingStalls] = useState(true);
   const [selectedStall, setSelectedStall] = useState(null);
   const [selectedVendorStallId, setSelectedVendorStallId] = useState('');
 
   const { activeTrackingOrderId } = useCart();
-  const { user, openAuthModal } = useAuth();
+  const { user } = useAuth();
   const [showTrackerModal, setShowTrackerModal] = useState(false);
+
+  // Listen to browser URL changes for /admin
+  useEffect(() => {
+    const handleUrlChange = () => {
+      const path = window.location.pathname.toLowerCase();
+      const hash = window.location.hash.toLowerCase();
+      if (path === '/admin' || path.startsWith('/admin') || hash === '#/admin') {
+        setCurrentView('admin');
+      } else if (currentView === 'admin') {
+        setCurrentView('customer');
+      }
+    };
+
+    window.addEventListener('popstate', handleUrlChange);
+    window.addEventListener('hashchange', handleUrlChange);
+    return () => {
+      window.removeEventListener('popstate', handleUrlChange);
+      window.removeEventListener('hashchange', handleUrlChange);
+    };
+  }, [currentView]);
 
   // Fetch stalls from backend
   const fetchStalls = async () => {
@@ -75,6 +106,14 @@ const KirbiteApp = () => {
     setShowTrackerModal(true);
   };
 
+  const handleNavigateView = (view) => {
+    if (view === 'customer' || view === 'vendor') {
+      window.history.pushState({}, '', '/');
+    }
+    setCurrentView(view);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col font-sans selection:bg-orange-500 selection:text-white">
       {/* Hidden button for Navbar to trigger tracker */}
@@ -84,13 +123,10 @@ const KirbiteApp = () => {
         onClick={() => setShowTrackerModal(true)}
       />
 
-      {/* Top Navigation */}
+      {/* Top Navigation (No Admin Button visible anywhere) */}
       <Navbar
-        currentView={currentView}
-        setCurrentView={(view) => {
-          setCurrentView(view);
-          window.scrollTo({ top: 0, behavior: 'smooth' });
-        }}
+        currentView={currentView === 'admin' ? 'customer' : currentView}
+        setCurrentView={handleNavigateView}
         stalls={stalls}
         selectedStallId={selectedVendorStallId}
         setSelectedStallId={setSelectedVendorStallId}
@@ -98,7 +134,13 @@ const KirbiteApp = () => {
 
       {/* Main Container */}
       <main className="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 pt-6">
-        {currentView === 'customer' ? (
+        {currentView === 'admin' ? (
+          <AdminPage
+            stalls={stalls}
+            onRefreshStalls={fetchStalls}
+            onExitAdmin={() => handleNavigateView('customer')}
+          />
+        ) : currentView === 'customer' ? (
           selectedStall ? (
             <StallMenu
               stallId={selectedStall._id}
@@ -136,7 +178,7 @@ const KirbiteApp = () => {
         stalls={stalls}
         onVendorSuccess={(stallId) => {
           setSelectedVendorStallId(stallId);
-          setCurrentView('vendor');
+          handleNavigateView('vendor');
         }}
       />
 

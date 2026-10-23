@@ -14,13 +14,20 @@ import {
   ChefHat,
   PackageCheck,
   Bike,
+  Lock,
+  KeyRound,
+  ShieldAlert,
+  LogOut,
+  ArrowRight,
 } from 'lucide-react';
 import { OrderCardVendor } from '../components/OrderCardVendor';
 import { api } from '../utils/api';
 import { socket } from '../utils/socket';
 import { playOrderChime } from '../utils/sound';
+import { useAuth } from '../context/AuthContext';
 
 export const VendorDashboard = ({ stalls = [], selectedStallId, onSelectStallId }) => {
+  const { user, loginVendor, logout } = useAuth();
   const [currentStall, setCurrentStall] = useState(null);
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -29,8 +36,13 @@ export const VendorDashboard = ({ stalls = [], selectedStallId, onSelectStallId 
   const [newOrderAlert, setNewOrderAlert] = useState(null);
   const [updatingStatusId, setUpdatingStatusId] = useState(null);
 
-  // Fallback to first stall if not provided
-  const activeStallId = selectedStallId || stalls[0]?._id;
+  // Vendor Login Gate State
+  const [loginStallId, setLoginStallId] = useState(selectedStallId || stalls[0]?._id || '');
+  const [loginPin, setLoginPin] = useState('');
+  const [loginError, setLoginError] = useState('');
+
+  // When user is a vendor, active stall defaults to user's stallId
+  const activeStallId = user?.role === 'vendor' ? user.stallId : selectedStallId || stalls[0]?._id;
 
   // Load stall details
   useEffect(() => {
@@ -157,6 +169,109 @@ export const VendorDashboard = ({ stalls = [], selectedStallId, onSelectStallId 
     return order.orderStatus === activeTab;
   });
 
+  // Handle inline vendor login
+  const handleVendorGateLogin = (e) => {
+    e.preventDefault();
+    if (!loginStallId) {
+      setLoginError('Please select your Kirba Chowk stall');
+      return;
+    }
+    if (!loginPin || loginPin.length < 4) {
+      setLoginError('Please enter your 4-digit Vendor PIN (default: 1234)');
+      return;
+    }
+
+    const stall = stalls.find((s) => s._id === loginStallId);
+    setLoginError('');
+    loginVendor({
+      stallId: loginStallId,
+      stallName: stall?.stallName || 'Stall Owner',
+      ownerPin: loginPin,
+    });
+    if (onSelectStallId) {
+      onSelectStallId(loginStallId);
+    }
+  };
+
+  // If user is not logged in as a vendor, show protected vendor login gate
+  if (user?.role !== 'vendor') {
+    return (
+      <div className="max-w-md mx-auto my-10 p-6 sm:p-8 bg-white rounded-3xl border border-slate-200 shadow-xl text-center animate-in fade-in zoom-in-95 duration-200">
+        <div className="w-16 h-16 rounded-2xl bg-orange-100 text-orange-600 mx-auto mb-4 flex items-center justify-center shadow-md shadow-orange-500/20">
+          <Lock className="w-8 h-8" />
+        </div>
+
+        <h2 className="text-2xl font-black text-slate-900 tracking-tight">
+          Stall Vendor Portal
+        </h2>
+        <p className="text-xs text-slate-500 mt-1.5 mb-6">
+          Access restricted to Kirba Chowk stall vendors. Sign in to manage live orders and toggle shop status.
+        </p>
+
+        {loginError && (
+          <div className="mb-4 p-3 bg-rose-50 border border-rose-200 rounded-xl text-rose-700 text-xs font-semibold text-left">
+            {loginError}
+          </div>
+        )}
+
+        <form onSubmit={handleVendorGateLogin} className="space-y-4 text-left">
+          <div>
+            <label className="block text-[11px] font-bold text-slate-600 uppercase tracking-wider mb-1">
+              Select Your Stall
+            </label>
+            <div className="relative">
+              <Store className="w-4 h-4 text-slate-400 absolute left-3 top-3.5" />
+              <select
+                value={loginStallId}
+                onChange={(e) => setLoginStallId(e.target.value)}
+                className="w-full text-xs pl-9 pr-3 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-hidden focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 font-bold text-slate-800"
+              >
+                {stalls.map((s) => (
+                  <option key={s._id} value={s._id}>
+                    {s.stallName} ({s.ownerName})
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-[11px] font-bold text-slate-600 uppercase tracking-wider mb-1">
+              Owner PIN (Default: 1234)
+            </label>
+            <div className="relative">
+              <KeyRound className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
+              <input
+                type="password"
+                maxLength={6}
+                placeholder="Enter 4-digit PIN"
+                value={loginPin}
+                onChange={(e) => setLoginPin(e.target.value)}
+                className="w-full text-xs pl-9 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-hidden focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 font-mono tracking-widest"
+              />
+            </div>
+          </div>
+
+          <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-[11px] text-amber-800 flex items-start gap-2">
+            <ShieldAlert className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+            <span>
+              Students cannot access this dashboard without vendor authorization.
+            </span>
+          </div>
+
+          <button
+            type="submit"
+            className="w-full py-3.5 px-4 bg-orange-600 hover:bg-orange-700 active:scale-[0.98] text-white font-extrabold text-sm rounded-2xl shadow-lg shadow-orange-600/30 flex items-center justify-center gap-2 transition-all"
+          >
+            <Store className="w-4 h-4 text-orange-200" />
+            <span>Unlock Vendor Dashboard</span>
+            <ArrowRight className="w-4 h-4" />
+          </button>
+        </form>
+      </div>
+    );
+  }
+
   return (
     <div className="pb-24 max-w-6xl mx-auto space-y-6">
       {/* Top Vendor Control Bar */}
@@ -238,6 +353,16 @@ export const VendorDashboard = ({ stalls = [], selectedStallId, onSelectStallId 
           >
             <Power className="w-4 h-4" />
             <span>{currentStall?.isOpen ? 'STALL OPEN (Online)' : 'STALL CLOSED (Offline)'}</span>
+          </button>
+
+          {/* Lock / Sign Out */}
+          <button
+            onClick={logout}
+            className="flex items-center gap-1.5 px-3 py-2.5 rounded-2xl text-xs font-bold text-slate-500 hover:text-rose-600 hover:bg-rose-50 border border-slate-200 transition-colors"
+            title="Lock Vendor Dashboard"
+          >
+            <LogOut className="w-3.5 h-3.5" />
+            <span>Lock</span>
           </button>
         </div>
       </div>

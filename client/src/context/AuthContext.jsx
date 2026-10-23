@@ -58,6 +58,24 @@ export const AuthProvider = ({ children }) => {
     return vendorUser;
   };
 
+  const loginAdmin = ({ username, password }) => {
+    if (
+      (username.trim().toLowerCase() === 'admin' || username.trim().toLowerCase() === 'kirbite_admin') &&
+      (password === 'admin123' || password === 'kirbite@2026' || password === 'admin')
+    ) {
+      const adminUser = {
+        role: 'admin',
+        username: username.trim(),
+        name: 'Master Campus Admin',
+        avatar: 'https://api.dicebear.com/7.x/bottts/svg?seed=kirbite_admin',
+        loggedAt: new Date().toISOString(),
+      };
+      setUser(adminUser);
+      return { success: true, user: adminUser };
+    }
+    return { success: false, message: 'Invalid admin username or password' };
+  };
+
   const logout = () => {
     setUser(null);
   };
@@ -78,6 +96,7 @@ export const AuthProvider = ({ children }) => {
         setAuthModalTab,
         loginStudent,
         loginVendor,
+        loginAdmin,
         logout,
         openAuthModal,
       }}
