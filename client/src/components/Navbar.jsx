@@ -1,13 +1,15 @@
 import React from 'react';
-import { ShoppingBag, Store, UtensilsCrossed, Clock, Radio, Sparkles } from 'lucide-react';
+import { ShoppingBag, Store, UtensilsCrossed, Clock, Radio, Sparkles, User, LogIn } from 'lucide-react';
 import { useCart } from '../context/CartContext';
+import { useAuth } from '../context/AuthContext';
 
 export const Navbar = ({ currentView, setCurrentView, stalls = [], selectedStallId, setSelectedStallId }) => {
-  const { totalCount, totalAmount, setIsCartOpen, activeTrackingOrderId } = useCart();
+  const { totalCount, setIsCartOpen, activeTrackingOrderId } = useCart();
+  const { user, openAuthModal } = useAuth();
 
   return (
     <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200/80 shadow-xs">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-3">
         {/* Kirbite Brand Logo & Wordmark */}
         <div 
           onClick={() => setCurrentView('customer')}
@@ -16,7 +18,7 @@ export const Navbar = ({ currentView, setCurrentView, stalls = [], selectedStall
           <img
             src="/kirbite-logo.svg"
             alt="Kirbite Logo"
-            className="w-10 h-10 rounded-xl shadow-md shadow-orange-500/20 group-hover:scale-105 transition-transform"
+            className="w-10 h-10 rounded-xl shadow-md shadow-orange-500/20 group-hover:scale-105 transition-transform shrink-0"
           />
           <div>
             <div className="flex items-center gap-2">
@@ -44,7 +46,7 @@ export const Navbar = ({ currentView, setCurrentView, stalls = [], selectedStall
               title="Track your active order live"
             >
               <Radio className="w-3.5 h-3.5 text-emerald-600" />
-              <span className="hidden xs:inline">Track Live</span>
+              <span className="hidden md:inline">Track Live</span>
             </button>
           )}
 
@@ -59,7 +61,7 @@ export const Navbar = ({ currentView, setCurrentView, stalls = [], selectedStall
               }`}
             >
               <Sparkles className="w-3.5 h-3.5" />
-              <span>Student View</span>
+              <span className="hidden xs:inline">Student</span>
             </button>
             <button
               onClick={() => setCurrentView('vendor')}
@@ -70,9 +72,35 @@ export const Navbar = ({ currentView, setCurrentView, stalls = [], selectedStall
               }`}
             >
               <Store className="w-3.5 h-3.5" />
-              <span>Vendor Dashboard</span>
+              <span className="hidden xs:inline">Vendor</span>
             </button>
           </div>
+
+          {/* User Profile / Login Button */}
+          {user ? (
+            <button
+              onClick={() => openAuthModal(user.role)}
+              className="flex items-center gap-2 p-1 sm:pr-2.5 rounded-xl bg-slate-100 hover:bg-orange-50 border border-slate-200 hover:border-orange-200 transition-all text-xs font-bold text-slate-800"
+              title={`Logged in as ${user.name || user.stallName}`}
+            >
+              <img
+                src={user.avatar}
+                alt={user.name || user.stallName}
+                className="w-7 h-7 rounded-lg bg-white border border-slate-200"
+              />
+              <span className="hidden sm:inline-block max-w-[90px] truncate">
+                {user.role === 'student' ? user.name.split(' ')[0] : 'Vendor'}
+              </span>
+            </button>
+          ) : (
+            <button
+              onClick={() => openAuthModal('student')}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-orange-600 hover:bg-orange-700 text-white text-xs font-bold transition-all shadow-xs"
+            >
+              <LogIn className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Sign In</span>
+            </button>
+          )}
 
           {/* Cart Icon in Customer View */}
           {currentView === 'customer' && (

@@ -5,19 +5,22 @@ import { StallMenu } from './pages/StallMenu';
 import { VendorDashboard } from './pages/VendorDashboard';
 import { CartDrawer } from './components/CartDrawer';
 import { OrderTrackerModal } from './components/OrderTrackerModal';
+import { LoginModal } from './components/LoginModal';
 import { CartProvider, useCart } from './context/CartContext';
+import { AuthProvider, useAuth } from './context/AuthContext';
 import { api } from './utils/api';
 import { socket } from './utils/socket';
-import { MapPin, Heart, ShieldCheck, Utensils, Store } from 'lucide-react';
+import { MapPin, ShieldCheck } from 'lucide-react';
 
-const KFCApp = () => {
+const KirbiteApp = () => {
   const [currentView, setCurrentView] = useState('customer'); // 'customer' | 'vendor'
   const [stalls, setStalls] = useState([]);
   const [loadingStalls, setLoadingStalls] = useState(true);
   const [selectedStall, setSelectedStall] = useState(null);
   const [selectedVendorStallId, setSelectedVendorStallId] = useState('');
 
-  const { activeTrackingOrderId, setActiveTrackingOrderId } = useCart();
+  const { activeTrackingOrderId } = useCart();
+  const { user, openAuthModal } = useAuth();
   const [showTrackerModal, setShowTrackerModal] = useState(false);
 
   // Fetch stalls from backend
@@ -128,6 +131,15 @@ const KFCApp = () => {
         />
       )}
 
+      {/* Login / Auth Modal */}
+      <LoginModal
+        stalls={stalls}
+        onVendorSuccess={(stallId) => {
+          setSelectedVendorStallId(stallId);
+          setCurrentView('vendor');
+        }}
+      />
+
       {/* Footer */}
       <footer className="mt-auto border-t border-slate-200/80 bg-white py-6">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500">
@@ -157,8 +169,10 @@ const KFCApp = () => {
 
 export default function App() {
   return (
-    <CartProvider>
-      <KFCApp />
-    </CartProvider>
+    <AuthProvider>
+      <CartProvider>
+        <KirbiteApp />
+      </CartProvider>
+    </AuthProvider>
   );
 }

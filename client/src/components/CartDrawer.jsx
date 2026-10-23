@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   X,
   Plus,
@@ -12,8 +12,10 @@ import {
   Banknote,
   ArrowRight,
   Trash2,
+  Sparkles,
 } from 'lucide-react';
 import { useCart } from '../context/CartContext';
+import { useAuth } from '../context/AuthContext';
 import { UpiPaymentModal } from './UpiPaymentModal';
 import { api } from '../utils/api';
 import confetti from 'canvas-confetti';
@@ -44,13 +46,24 @@ export const CartDrawer = ({ onOrderSuccess }) => {
     setActiveTrackingOrderId,
   } = useCart();
 
+  const { user, openAuthModal } = useAuth();
+
   // Form State
-  const [studentName, setStudentName] = useState(() => localStorage.getItem('kfc_student_name') || '');
-  const [phone, setPhone] = useState(() => localStorage.getItem('kfc_student_phone') || '');
-  const [hostelBlock, setHostelBlock] = useState(() => localStorage.getItem('kfc_hostel_block') || HOSTEL_BLOCKS[0]);
-  const [roomNumber, setRoomNumber] = useState(() => localStorage.getItem('kfc_room_number') || '');
+  const [studentName, setStudentName] = useState(() => user?.name || localStorage.getItem('kfc_student_name') || '');
+  const [phone, setPhone] = useState(() => user?.phone || localStorage.getItem('kfc_student_phone') || '');
+  const [hostelBlock, setHostelBlock] = useState(() => user?.hostelBlock || localStorage.getItem('kfc_hostel_block') || HOSTEL_BLOCKS[0]);
+  const [roomNumber, setRoomNumber] = useState(() => user?.room || localStorage.getItem('kfc_room_number') || '');
   const [orderNotes, setOrderNotes] = useState('');
   const [paymentMode, setPaymentMode] = useState('UPI'); // 'UPI' or 'CASH'
+
+  useEffect(() => {
+    if (user && user.role === 'student') {
+      if (user.name) setStudentName(user.name);
+      if (user.phone) setPhone(user.phone);
+      if (user.hostelBlock) setHostelBlock(user.hostelBlock);
+      if (user.room) setRoomNumber(user.room);
+    }
+  }, [user]);
 
   // UPI Modal State
   const [showUpiModal, setShowUpiModal] = useState(false);
@@ -276,10 +289,26 @@ export const CartDrawer = ({ onOrderSuccess }) => {
 
               {/* Hostel Delivery Form */}
               <div className="p-4 bg-orange-50/50 border border-orange-100 rounded-2xl space-y-3">
-                <h4 className="text-xs font-bold text-orange-950 uppercase tracking-wider flex items-center gap-1.5">
-                  <MapPin className="w-3.5 h-3.5 text-orange-600" />
-                  Hostel Delivery Details
-                </h4>
+                <div className="flex items-center justify-between">
+                  <h4 className="text-xs font-bold text-orange-950 uppercase tracking-wider flex items-center gap-1.5">
+                    <MapPin className="w-3.5 h-3.5 text-orange-600" />
+                    Hostel Delivery Details
+                  </h4>
+                  {user ? (
+                    <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100/70 px-2 py-0.5 rounded-full">
+                      Auto-filled
+                    </span>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => openAuthModal('student')}
+                      className="text-[11px] font-bold text-orange-600 hover:text-orange-700 flex items-center gap-1"
+                    >
+                      <Sparkles className="w-3 h-3" />
+                      <span>Sign In</span>
+                    </button>
+                  )}
+                </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
