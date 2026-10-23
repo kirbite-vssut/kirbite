@@ -1,220 +1,154 @@
 import React, { useState, useEffect } from 'react';
-import { Navbar } from './components/Navbar';
-import { CustomerHome } from './pages/CustomerHome';
-import { StallMenu } from './pages/StallMenu';
+import { StreetJourney } from './scene/StreetJourney';
+import { SignInGate } from './auth/SignInGate';
+import { LoaderScreen } from './components/LoaderScreen';
+import { CheckoutDrawer } from './components/CheckoutDrawer';
+import { OrderTrackerModal } from './components/OrderTrackerModal';
 import { VendorDashboard } from './pages/VendorDashboard';
 import { AdminPage } from './pages/AdminPage';
-import { CartDrawer } from './components/CartDrawer';
-import { OrderTrackerModal } from './components/OrderTrackerModal';
-import { LoginModal } from './components/LoginModal';
-import { CartProvider, useCart } from './context/CartContext';
-import { AuthProvider, useAuth } from './context/AuthContext';
+import { useKirbiteStore } from './store/useKirbiteStore';
 import { api } from './utils/api';
 import { socket } from './utils/socket';
-import { MapPin, ShieldCheck } from 'lucide-react';
 
-const KirbiteApp = () => {
-  // Check URL pathname or hash for hidden /admin route
-  const getInitialView = () => {
+export default function App() {
+  const { user, isPreloaded, activeTrackingOrderId } = useKirbiteStore();
+
+  // Route state
+  const getInitialRoute = () => {
     const path = window.location.pathname.toLowerCase();
-    const hash = window.location.hash.toLowerCase();
-    if (path === '/admin' || path.startsWith('/admin') || hash === '#/admin') {
-      return 'admin';
-    }
-    return 'customer';
+    if (path === '/admin' || path.startsWith('/admin')) return 'admin';
+    if (path.startsWith('/vendor')) return 'vendor';
+    return 'street';
   };
 
-  const [currentView, setCurrentView] = useState(getInitialView); // 'customer' | 'vendor' | 'admin'
+  const [currentRoute, setCurrentRoute] = useState(getInitialRoute);
   const [stalls, setStalls] = useState([]);
-  const [loadingStalls, setLoadingStalls] = useState(true);
-  const [selectedStall, setSelectedStall] = useState(null);
   const [selectedVendorStallId, setSelectedVendorStallId] = useState('');
+  const [showOrderTracker, setShowOrderTracker] = useState(false);
 
-  const { activeTrackingOrderId } = useCart();
-  const { user } = useAuth();
-  const [showTrackerModal, setShowTrackerModal] = useState(false);
-
-  // Listen to browser URL changes for /admin
+  // Sync browser path navigation
   useEffect(() => {
     const handleUrlChange = () => {
       const path = window.location.pathname.toLowerCase();
-      const hash = window.location.hash.toLowerCase();
-      if (path === '/admin' || path.startsWith('/admin') || hash === '#/admin') {
-        setCurrentView('admin');
-      } else if (currentView === 'admin') {
-        setCurrentView('customer');
+      if (path === '/admin' || path.startsWith('/admin')) {
+        setCurrentRoute('admin');
+      } else if (path.startsWith('/vendor')) {
+        setCurrentRoute('vendor');
+      } else {
+        setCurrentRoute('street');
       }
     };
 
     window.addEventListener('popstate', handleUrlChange);
-    window.addEventListener('hashchange', handleUrlChange);
-    return () => {
-      window.removeEventListener('popstate', handleUrlChange);
-      window.removeEventListener('hashchange', handleUrlChange);
-    };
-  }, [currentView]);
+    return () => window.removeEventListener('popstate', handleUrlChange);
+  }, []);
 
-  // Fetch stalls from backend
+  // Fetch stalls only after sign in (or if vendor/admin)
   const fetchStalls = async () => {
     try {
-      setLoadingStalls(true);
       const res = await api.getStalls();
-      if (res.success) {
+      if (res.success && res.data) {
         setStalls(res.data);
         if (res.data.length > 0 && !selectedVendorStallId) {
           setSelectedVendorStallId(res.data[0]._id);
         }
       }
     } catch (err) {
-      console.error('Failed to load stalls:', err);
-    } finally {
-      setLoadingStalls(false);
+      console.error('Failed to load Kirba Chowk stalls:', err);
     }
   };
 
   useEffect(() => {
-    fetchStalls();
+    if (user || currentRoute === 'vendor' || currentRoute === 'admin') {
+      fetchStalls();
+    }
+  }, [user, currentRoute]);
 
-    // Listen for stall open/close updates in real time
+  // Live Socket.io updates for stall Open/Closed state
+  useEffect(() => {
     const handleStallStatusChange = (data) => {
       setStalls((prev) =>
         prev.map((s) => (s._id === data.stallId ? { ...s, isOpen: data.isOpen } : s))
       );
-      if (selectedStall && selectedStall._id === data.stallId) {
-        setSelectedStall((prev) => ({ ...prev, isOpen: data.isOpen }));
-      }
     };
 
     socket.on('stall_status_changed', handleStallStatusChange);
-
-    return () => {
-      socket.off('stall_status_changed', handleStallStatusChange);
-    };
+    return () => socket.off('stall_status_changed', handleStallStatusChange);
   }, []);
 
-  const handleStallSelect = (stall) => {
-    setSelectedStall(stall);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
+  // 1. Initial Loader Screen
+  if (!isPreloaded) {
+    return <LoaderScreen />;
+  }
 
-  const handleBackToStalls = () => {
-    setSelectedStall(null);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
+  // 2. Hidden Admin Center (/admin)
+  if (currentRoute === 'admin') {
+    return (
+      <div className="min-h-screen bg-slate-950 text-white font-sans">
+        <AdminPage
+          stalls={stalls}
+          onRefreshStalls={fetchStalls}
+          onExitAdmin={() => {
+            window.history.pushState({}, '', '/');
+            setCurrentRoute('street');
+          }}
+        />
+      </div>
+    );
+  }
 
-  const handleOrderSuccess = (newOrder) => {
-    setShowTrackerModal(true);
-  };
+  // 3. Vendor Dashboard (/vendor/:stallId)
+  if (currentRoute === 'vendor') {
+    return (
+      <div className="min-h-screen bg-slate-950 text-white font-sans p-4 sm:p-6">
+        <div className="max-w-6xl mx-auto mb-4 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <img src="/kirbite-logo.svg" alt="Kirbite" className="w-8 h-8 rounded-lg" />
+            <span className="font-black text-xl text-white">
+              Kir<span className="text-orange-500">bite</span> Vendor Portal
+            </span>
+          </div>
+          <button
+            onClick={() => {
+              window.history.pushState({}, '', '/');
+              setCurrentRoute('street');
+            }}
+            className="px-3.5 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-xs font-bold text-white transition-colors cursor-pointer"
+          >
+            ← Public Street
+          </button>
+        </div>
+        <VendorDashboard
+          stalls={stalls}
+          selectedStallId={selectedVendorStallId}
+          onSelectStallId={setSelectedVendorStallId}
+        />
+      </div>
+    );
+  }
 
-  const handleNavigateView = (view) => {
-    if (view === 'customer' || view === 'vendor') {
-      window.history.pushState({}, '', '/');
-    }
-    setCurrentView(view);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
+  // 4. Customer Sign-In Gate (BEFORE street or menus render - 02 Spec)
+  if (!user) {
+    return <SignInGate />;
+  }
 
+  // 5. Cinematic Scroll-Driven Street Journey
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col font-sans selection:bg-orange-500 selection:text-white">
-      {/* Hidden button for Navbar to trigger tracker */}
-      <button
-        id="open-tracker-btn"
-        className="hidden"
-        onClick={() => setShowTrackerModal(true)}
+    <div className="min-h-screen bg-slate-950 text-white font-sans">
+      <StreetJourney stalls={stalls} />
+
+      {/* Persistent Checkout Drawer */}
+      <CheckoutDrawer
+        onOrderPlaced={() => setShowOrderTracker(true)}
       />
 
-      {/* Top Navigation (No Admin Button visible anywhere) */}
-      <Navbar
-        currentView={currentView === 'admin' ? 'customer' : currentView}
-        setCurrentView={handleNavigateView}
-        stalls={stalls}
-        selectedStallId={selectedVendorStallId}
-        setSelectedStallId={setSelectedVendorStallId}
-      />
-
-      {/* Main Container */}
-      <main className="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 pt-6">
-        {currentView === 'admin' ? (
-          <AdminPage
-            stalls={stalls}
-            onRefreshStalls={fetchStalls}
-            onExitAdmin={() => handleNavigateView('customer')}
-          />
-        ) : currentView === 'customer' ? (
-          selectedStall ? (
-            <StallMenu
-              stallId={selectedStall._id}
-              onBack={handleBackToStalls}
-            />
-          ) : (
-            <CustomerHome
-              stalls={stalls}
-              loading={loadingStalls}
-              onSelectStall={handleStallSelect}
-            />
-          )
-        ) : (
-          <VendorDashboard
-            stalls={stalls}
-            selectedStallId={selectedVendorStallId}
-            onSelectStallId={setSelectedVendorStallId}
-          />
-        )}
-      </main>
-
-      {/* Cart Drawer */}
-      <CartDrawer onOrderSuccess={handleOrderSuccess} />
-
-      {/* Order Tracker Modal */}
-      {showTrackerModal && activeTrackingOrderId && (
+      {/* Live Order Tracker Modal */}
+      {showOrderTracker && activeTrackingOrderId && (
         <OrderTrackerModal
           orderId={activeTrackingOrderId}
-          onClose={() => setShowTrackerModal(false)}
+          onClose={() => setShowOrderTracker(false)}
         />
       )}
-
-      {/* Login / Auth Modal */}
-      <LoginModal
-        stalls={stalls}
-        onVendorSuccess={(stallId) => {
-          setSelectedVendorStallId(stallId);
-          handleNavigateView('vendor');
-        }}
-      />
-
-      {/* Footer */}
-      <footer className="mt-auto border-t border-slate-200/80 bg-white py-6">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500">
-          <div className="flex items-center gap-2">
-            <span className="font-extrabold text-slate-900 text-sm">
-              Kir<span className="text-orange-600">bite</span>
-            </span>
-            <span>•</span>
-            <span>Campus Hostel Food Delivery</span>
-          </div>
-
-          <div className="flex items-center gap-4">
-            <span className="flex items-center gap-1 text-slate-600">
-              <MapPin className="w-3.5 h-3.5 text-orange-600" />
-              Kirba Chowk
-            </span>
-            <span className="flex items-center gap-1 text-slate-600">
-              <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-              Direct UPI Intent & COD
-            </span>
-          </div>
-        </div>
-      </footer>
     </div>
-  );
-};
-
-export default function App() {
-  return (
-    <AuthProvider>
-      <CartProvider>
-        <KirbiteApp />
-      </CartProvider>
-    </AuthProvider>
   );
 }
